@@ -7,7 +7,7 @@
 scriptencoding utf-8
 
 if !exists('g:loaded_comfortable_motion')
-    finish
+    "finish
 endif
 let g:loaded_comfortable_motion = 1
 
@@ -38,6 +38,12 @@ let s:comfortable_motion_state = {
 \ 'velocity': 0.0,
 \ 'delta': 0.0,
 \ }
+
+augroup ccc
+  au!
+  au WinLeave * let s:comfortable_motion_state.velocity = 0.0
+  au WinLeave * let s:comfortable_motion_state.impulse = 0.0
+augroup end
 
 function! s:tick(timer_id)
 
@@ -75,10 +81,12 @@ function! s:tick(timer_id)
     let l:st.delta = 0
     call timer_stop(s:timer_id)
     unlet s:timer_id
+    hi CursorLine gui=underline
   endif
 endfunction
 
 function! comfortable_motion#flick(impulse)
+  hi CursorLine gui=None
   if !exists('s:timer_id')
     " There is no thread, start one
     let l:interval = float2nr(round(g:comfortable_motion_interval))
