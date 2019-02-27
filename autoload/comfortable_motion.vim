@@ -1,13 +1,14 @@
+scriptencoding utf-8
+" vim:set ts=8 sts=2 sw=2 tw=0:
+
 "=============================================================================
 " File: comfortable_motion.vim
 " Author: Yuta Taniguchi
 " Created: 2016-10-02
 "=============================================================================
 
-scriptencoding utf-8
-
 if !exists('g:loaded_comfortable_motion')
-    "finish
+  "finish
 endif
 let g:loaded_comfortable_motion = 1
 
@@ -37,7 +38,12 @@ let s:comfortable_motion_state = {
 \ 'impulse': 0.0,
 \ 'velocity': 0.0,
 \ 'delta': 0.0,
+\ 'direction': 0,
+\ 'save_scrolloff': 0,
+\ 'save_cursorline': -1,
+\ 'save_cursorcolumn': -1,
 \ }
+ "'direction': positive:down, zero:stop, negative:up
 
 augroup ccc
   au!
@@ -76,23 +82,49 @@ function! s:tick(timer_id)
     endif
     redraw
   else
-    " Stop scrolling and the thread
-    let l:st.velocity = 0
-    let l:st.delta = 0
-    call timer_stop(s:timer_id)
-    unlet s:timer_id
-    hi CursorLine gui=underline
+    call s:stop()
   endif
 endfunction
 
+function! s:stop()
+  let l:st = s:comfortable_motion_state  " This is just an alias for the global variable
+  " Stop scrolling and the thread
+  let l:st.velocity = 0
+  let l:st.delta = 0
+  call timer_stop(s:timer_id)
+  unlet s:timer_id
+  let l:st.direction = 0
+  let &scrolloff = l:st.save_scrolloff
+  let &cursorline = l:st.save_cursorline
+  let &cursorcolumn = l:st.save_cursorcolumn
+  "hi CursorLine gui=underline
+  set cursorline
+endfunction
+
 function! comfortable_motion#flick(impulse)
-  hi CursorLine gui=None
+  let l:st = s:comfortable_motion_state  " This is just an alias for the global variable
   if !exists('s:timer_id')
+    "hi CursorLine gui=None
+    let l:st.save_scrolloff = &scrolloff
+    let l:st.save_cursorline = &cursorline
+    let l:st.save_cursorcolumn = &cursorcolumn
+    normal! M
+    let &scrolloff = 9999
+    set nocursorline
+    set nocursorcolumn
     " There is no thread, start one
     let l:interval = float2nr(round(g:comfortable_motion_interval))
     let s:timer_id = timer_start(l:interval, function("s:tick"), {'repeat': -1})
   endif
-  let s:comfortable_motion_state.impulse += a:impulse
+  if l:st.direction > 0 && a:impulse < 0 || l:st.direction < 0 && a:impulse > 0
+    call s:stop()
+    "let l:impulse = 0.0
+    return
+  else
+    let l:impulse =  a:impulse
+  endif
+  let l:st.impulse += l:impulse
+  let l:st.direction = a:impulse
 endfunction
 
 let &cpo = s:save_cpo
