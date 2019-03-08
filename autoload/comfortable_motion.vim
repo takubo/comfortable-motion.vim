@@ -1,6 +1,27 @@
 scriptencoding utf-8
 " vim:set ts=8 sts=2 sw=2 tw=0:
 
+" MIT License
+" 
+" Copyright (c) 2016 Yuta Taniguchi
+" 
+" Permission is hereby granted, free of charge, to any person obtaining a copy
+" of this software and associated documentation files (the "Software"), to deal
+" in the Software without restriction, including without limitation the rights
+" to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+" copies of the Software, and to permit persons to whom the Software is
+" furnished to do so, subject to the following conditions:
+" 
+" The above copyright notice and this permission notice shall be included in all
+" copies or substantial portions of the Software.
+" 
+" THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+" IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+" FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+" AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+" LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+" OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+" SOFTWARE.
 "=============================================================================
 " File: comfortable_motion.vim
 " Author: Yuta Taniguchi
@@ -8,7 +29,7 @@ scriptencoding utf-8
 "=============================================================================
 
 if !exists('g:loaded_comfortable_motion')
-  "finish
+    "finish
 endif
 let g:loaded_comfortable_motion = 1
 
@@ -38,21 +59,19 @@ let s:comfortable_motion_state = {
 \ 'impulse': 0.0,
 \ 'velocity': 0.0,
 \ 'delta': 0.0,
-\ 'direction': 0,
 \ 'save_scrolloff': 0,
 \ 'save_cursorline': -1,
 \ 'save_cursorcolumn': -1,
 \ }
- "'direction': positive:down, zero:stop, negative:up
 
-augroup ccc
+augroup comfortable_motion
   au!
   au WinLeave * let s:comfortable_motion_state.velocity = 0.0
   au WinLeave * let s:comfortable_motion_state.impulse = 0.0
+  au WinLeave * if exists('s:timer_id') | call timer_stop(s:timer_id) | unlet s:timer_id | endif
 augroup end
 
 function! s:tick(timer_id)
-
   let l:st = s:comfortable_motion_state  " This is just an alias for the global variable
   if abs(l:st.velocity) >= 1 || l:st.impulse != 0 " short-circuit if velocity is less than one
     let l:dt = g:comfortable_motion_interval / 1000.0  " Unit conversion: ms -> s
@@ -83,49 +102,69 @@ function! s:tick(timer_id)
     redraw
   else
     call s:stop()
+    redraw
   endif
 endfunction
 
 function! s:stop()
-  let l:st = s:comfortable_motion_state  " This is just an alias for the global variable
+  let st = s:comfortable_motion_state  " This is just an alias for the global variable
   " Stop scrolling and the thread
-  let l:st.velocity = 0
-  let l:st.delta = 0
-  call timer_stop(s:timer_id)
-  unlet s:timer_id
-  let l:st.direction = 0
-  let &scrolloff = l:st.save_scrolloff
-  let &cursorline = l:st.save_cursorline
-  let &cursorcolumn = l:st.save_cursorcolumn
-  "hi CursorLine gui=underline
-  set cursorline
+  let st.velocity = 0
+  let st.delta = 0
+  let &scrolloff = st.save_scrolloff
+  let &cursorline = st.save_cursorline
+  let &cursorcolumn = st.save_cursorcolumn
 endfunction
 
 function! comfortable_motion#flick(impulse)
-  let l:st = s:comfortable_motion_state  " This is just an alias for the global variable
+  let st = s:comfortable_motion_state  " This is just an alias for the global variable
+
+  " save
+  let st.save_scrolloff = &scrolloff
+  let st.save_cursorline = &cursorline
+  let st.save_cursorcolumn = &cursorcolumn
+
+  " set
+  normal! M
+  let &scrolloff = 9999
+
+  " start
+  let st.impulse += a:impulse
   if !exists('s:timer_id')
-    "hi CursorLine gui=None
-    let l:st.save_scrolloff = &scrolloff
-    let l:st.save_cursorline = &cursorline
-    let l:st.save_cursorcolumn = &cursorcolumn
-    normal! M
-    let &scrolloff = 9999
-    set nocursorline
-    set nocursorcolumn
     " There is no thread, start one
     let l:interval = float2nr(round(g:comfortable_motion_interval))
     let s:timer_id = timer_start(l:interval, function("s:tick"), {'repeat': -1})
   endif
-  if l:st.direction > 0 && a:impulse < 0 || l:st.direction < 0 && a:impulse > 0
-    call s:stop()
-    "let l:impulse = 0.0
-    return
-  else
-    let l:impulse =  a:impulse
+
+  " loop
+  while 1
+    set nocursorline
+    set nocursorcolumn
+
+    let c = getchar()
+    let k = nr2char(c)
+    if k != "\<Space>" && k != "\<C-e>" && k != "j" && a:impulse > 0
+      break
+    elseif c != "\<S-Space>" && k != "\<C-y>" && k != "k" && a:impulse < 0
+      break
+    endif
+
+    let st.impulse += a:impulse
+  endwhile
+
+  " end
+  call timer_stop(s:timer_id)
+  unlet s:timer_id
+  call s:stop()
+  if k != "\<Space>" && c != "\<S-Space>" && k != "\<C-e>" && k != "\<C-y>" && k != "j" && k != "k"
+    call feedkeys(k, 'm')
   endif
-  let l:st.impulse += l:impulse
-  let l:st.direction = a:impulse
 endfunction
+
+
+let s:up_key = "\<C-y>"
+let s:down_key = "\<C-e>"
+
 
 let &cpo = s:save_cpo
 unlet s:save_cpo
