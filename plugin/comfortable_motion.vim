@@ -25,5 +25,15 @@ if !exists('g:comfortable_motion_no_default_key_mappings') ||
 endif
 
 
+let g:comfortable_motion_no_default_key_mappings = v:true
+let g:comfortable_motion_friction = 90.0
+let g:comfortable_motion_air_drag = 6.0
+let g:comfortable_motion_impulse_multiplier = 3.8  " Feel free to increase/decrease this value.
+nnoremap <silent> <C-e> :call comfortable_motion#flick(g:comfortable_motion_impulse_multiplier * winheight(0)     )<CR>
+nnoremap <silent> <C-y> :call comfortable_motion#flick(g:comfortable_motion_impulse_multiplier * winheight(0) * -1)<CR>
+nnoremap <silent> gj    :call comfortable_motion#flick(g:comfortable_motion_impulse_multiplier * winheight(0)     )<CR>
+nnoremap <silent> gk    :call comfortable_motion#flick(g:comfortable_motion_impulse_multiplier * winheight(0) * -1)<CR>
+
+
 let &cpo = s:save_cpo
 unlet s:save_cpo
