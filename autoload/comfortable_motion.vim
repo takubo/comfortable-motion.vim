@@ -143,16 +143,18 @@ function! comfortable_motion#flick(impulse)
 
     let c = getchar()
     let k = nr2char(c)
-    if k != "\<Space>" && k != "\<C-e>" && k != "j" && a:impulse > 0
-      break
-    elseif c != "\<S-Space>" && k != "\<C-y>" && k != "k" && a:impulse < 0
+
+    if    k != "\<Space>" && k != "\<C-e>" && k != "j" && a:impulse > 0
+     \ || c != "\<S-Space>" && k != "\<C-y>" && k != "k" && a:impulse < 0
+     \ || line('w$') == line('$') && a:impulse > 0
+     \ || line('w0') == line('0') && a:impulse < 0
       break
     endif
 
     let st.impulse += a:impulse
   endwhile
 
-  " end
+  " finish
   call timer_stop(s:timer_id)
   unlet s:timer_id
   call s:stop()
@@ -160,10 +162,6 @@ function! comfortable_motion#flick(impulse)
     call feedkeys(k, 'm')
   endif
 endfunction
-
-
-let s:up_key = "\<C-y>"
-let s:down_key = "\<C-e>"
 
 
 let &cpo = s:save_cpo
