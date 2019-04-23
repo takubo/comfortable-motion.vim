@@ -1,5 +1,5 @@
 scriptencoding utf-8
-" vim:set ts=8 sts=2 sw=2 tw=0:
+" vim:set ts=8 sts=2 sw=2 tw=0 expandtab:
 
 " MIT License
 " 
@@ -39,7 +39,7 @@ set cpo&vim
 
 " Default parameter values
 "if !exists('g:comfortable_motion_interval')
-  let g:comfortable_motion_interval = 1000.0 / 60
+  let g:comfortable_motion_interval = 100.0 / 60
 "endif
 if !exists('g:comfortable_motion_friction')
   let g:comfortable_motion_friction = 80.0
@@ -94,11 +94,20 @@ function! s:tick(timer_id)
     let l:st.delta -= l:int_delta
     if l:int_delta > 0
       execute "normal! " . string(abs(l:int_delta)) . g:comfortable_motion_scroll_down_key
+      if line('w$') == line('$')
+        "let l:st.impulse = 0
+        let l:st.velocity = 0
+      endif
     elseif l:int_delta < 0
       execute "normal! " . string(abs(l:int_delta)) . g:comfortable_motion_scroll_up_key
+      if line('w0') == 1
+        "let l:st.impulse = 0
+        let l:st.velocity = 0
+      endif
     else
       " Do nothing
     endif
+    echo "DDD" s:comfortable_motion_state
     redraw
   else
     call s:stop()
@@ -144,10 +153,12 @@ function! comfortable_motion#flick(impulse)
     let c = getchar()
     let k = nr2char(c)
 
-    if    k != "\<Space>" && k != "\<C-e>" && k != "j" && a:impulse > 0
-     \ || c != "\<S-Space>" && k != "\<C-y>" && k != "k" && a:impulse < 0
+    "if    k != "\<Space>" && k != "\<C-e>" && k != "j" && a:impulse > 0
+    " \ || c != "\<S-Space>" && k != "\<C-y>" && k != "k" && a:impulse < 0
+    if    k != "\<Space>" && k != "j" && a:impulse > 0
+     \ || c != "\<S-Space>" && k != "k" && a:impulse < 0
      \ || line('w$') == line('$') && a:impulse > 0
-     \ || line('w0') == line('0') && a:impulse < 0
+     \ || line('w0') == 1         && a:impulse < 0
       break
     endif
 
@@ -158,7 +169,8 @@ function! comfortable_motion#flick(impulse)
   call timer_stop(s:timer_id)
   unlet s:timer_id
   call s:stop()
-  if k != "\<Space>" && c != "\<S-Space>" && k != "\<C-e>" && k != "\<C-y>" && k != "j" && k != "k"
+  "if k != "\<Space>" && c != "\<S-Space>" && k != "\<C-e>" && k != "\<C-y>" && k != "j" && k != "k"
+  if k != "\<Space>" && c != "\<S-Space>" && k != "j" && k != "k"
     call feedkeys(k, 'm')
   endif
 endfunction
