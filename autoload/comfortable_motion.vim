@@ -38,9 +38,9 @@ set cpo&vim
 
 
 " Default parameter values
-if !exists('g:comfortable_motion_interval')
+"if !exists('g:comfortable_motion_interval')
   let g:comfortable_motion_interval = 1000.0 / 60
-endif
+"endif
 if !exists('g:comfortable_motion_friction')
   let g:comfortable_motion_friction = 80.0
 endif
